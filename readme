@@ -1,0 +1,404 @@
+# 402 Agent for Pump.fun Deployment
+
+A payment-gated API service that enables AI agents to deploy tokens on Pump.fun using the HTTP 402 (Payment Required) standard with Lightning Network payments.
+
+## Overview
+
+This agent implements the emerging 402 payment protocol, allowing AI agents and automated systems to programmatically deploy tokens on Pump.fun by paying per request via Lightning Network. The service acts as a bridge between payment verification and Pump.fun's deployment API.
+
+## Features
+
+- **402 Payment Protocol**: Standard HTTP 402 response with Lightning invoice
+- **Lightning Network Integration**: Fast, low-fee micropayments
+- **Pump.fun Integration**: Direct token deployment to Solana via Pump.fun
+- **Agent-Friendly API**: RESTful endpoints designed for AI agent consumption
+- **Payment Verification**: Automatic invoice verification before execution
+- **Rate Limiting**: Configurable limits per payment tier
+- **Webhook Support**: Real-time deployment status updates
+
+## Architecture
+
+```
+┌─────────────┐      402 Request       ┌──────────────┐
+│  AI Agent   │ ───────────────────────>│  402 Agent   │
+│             │                         │   Service    │
+│             │ <───────────────────────│              │
+└─────────────┘   Lightning Invoice     └──────┬───────┘
+       │                                       │
+       │  Payment via LN                       │
+       │                                       │
+       v                                       v
+┌─────────────┐                         ┌──────────────┐
+│  Lightning  │                         │  Pump.fun    │
+│   Network   │                         │     API      │
+└─────────────┘                         └──────────────┘
+```
+
+## Installation
+
+### Prerequisites
+
+- Node.js 18+
+- Lightning Network node (LND, CLN, or similar)
+- Solana wallet with SOL for gas fees
+- Pump.fun API access
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/pumpfun-402-agent.git
+cd pumpfun-402-agent
+
+# Install dependencies
+npm install
+
+# Copy environment template
+cp .env.example .env
+
+# Configure your environment variables
+nano .env
+```
+
+### Environment Variables
+
+```env
+# Lightning Network
+LN_NODE_URL=https://your-ln-node:8080
+LN_MACAROON_PATH=/path/to/admin.macaroon
+LN_TLS_CERT_PATH=/path/to/tls.cert
+
+# Solana & Pump.fun
+SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+PUMPFUN_PRIVATE_KEY=your_private_key_here
+PUMPFUN_API_URL=https://pumpportal.fun/api
+
+# Service Configuration
+PORT=3402
+PRICE_PER_DEPLOYMENT=1000 # satoshis
+INVOICE_EXPIRY=300 # seconds
+WEBHOOK_SECRET=your_webhook_secret
+
+# Security
+API_KEY_SALT=random_salt_for_api_keys
+MAX_REQUESTS_PER_HOUR=100
+```
+
+## API Documentation
+
+### 1. Initiate Token Deployment
+
+**POST** `/api/v1/deploy/token`
+
+Initiates a token deployment request. Returns 402 with Lightning invoice.
+
+**Request Body:**
+```json
+{
+  "tokenName": "MyToken",
+  "tokenSymbol": "MTK",
+  "description": "A token deployed by an AI agent",
+  "imageUrl": "https://example.com/token-image.png",
+  "twitter": "https://twitter.com/mytoken",
+  "telegram": "https://t.me/mytoken",
+  "website": "https://mytoken.com",
+  "initialBuyAmount": 0.1,
+  "slippageBps": 500,
+  "priorityFee": 0.0001,
+  "webhookUrl": "https://your-agent.com/webhook"
+}
+```
+
+**Response (402):**
+```json
+{
+  "status": 402,
+  "message": "Payment Required",
+  "deploymentId": "dep_abc123xyz",
+  "payment": {
+    "amount": 1000,
+    "currency": "satoshis",
+    "invoice": "lnbc10n1p3...",
+    "expiresAt": "2025-10-28T15:30:00Z"
+  },
+  "verifyUrl": "/api/v1/deploy/verify/dep_abc123xyz"
+}
+```
+
+### 2. Verify Payment & Execute
+
+**GET** `/api/v1/deploy/verify/{deploymentId}`
+
+Checks payment status and executes deployment if paid.
+
+**Response (200 - Paid):**
+```json
+{
+  "status": "executing",
+  "deploymentId": "dep_abc123xyz",
+  "paid": true,
+  "paidAt": "2025-10-28T15:25:00Z",
+  "deployment": {
+    "status": "processing",
+    "estimatedCompletion": "2025-10-28T15:26:00Z"
+  }
+}
+```
+
+**Response (402 - Unpaid):**
+```json
+{
+  "status": "pending_payment",
+  "deploymentId": "dep_abc123xyz",
+  "paid": false,
+  "payment": {
+    "invoice": "lnbc10n1p3...",
+    "expiresAt": "2025-10-28T15:30:00Z"
+  }
+}
+```
+
+### 3. Get Deployment Status
+
+**GET** `/api/v1/deploy/status/{deploymentId}`
+
+**Response:**
+```json
+{
+  "deploymentId": "dep_abc123xyz",
+  "status": "completed",
+  "tokenAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+  "signature": "5wHu...",
+  "marketCap": 50000,
+  "createdAt": "2025-10-28T15:26:00Z",
+  "links": {
+    "pumpfun": "https://pump.fun/7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+    "solscan": "https://solscan.io/token/7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
+  }
+}
+```
+
+## Usage Examples
+
+### Python Agent Example
+
+```python
+import requests
+import time
+
+class PumpFun402Agent:
+    def __init__(self, base_url):
+        self.base_url = base_url
+    
+    def deploy_token(self, token_data):
+        # Step 1: Initiate deployment
+        response = requests.post(
+            f"{self.base_url}/api/v1/deploy/token",
+            json=token_data
+        )
+        
+        if response.status_code == 402:
+            payment_data = response.json()
+            deployment_id = payment_data['deploymentId']
+            invoice = payment_data['payment']['invoice']
+            
+            print(f"Payment required: {invoice}")
+            
+            # Step 2: Pay invoice (using your Lightning client)
+            self.pay_lightning_invoice(invoice)
+            
+            # Step 3: Poll for completion
+            while True:
+                status = requests.get(
+                    f"{self.base_url}/api/v1/deploy/verify/{deployment_id}"
+                )
+                
+                data = status.json()
+                if data['status'] == 'executing':
+                    print("Deployment in progress...")
+                    time.sleep(5)
+                    
+                    # Check final status
+                    final = requests.get(
+                        f"{self.base_url}/api/v1/deploy/status/{deployment_id}"
+                    )
+                    
+                    if final.json()['status'] == 'completed':
+                        return final.json()
+                else:
+                    time.sleep(2)
+    
+    def pay_lightning_invoice(self, invoice):
+        # Implement your Lightning payment logic here
+        pass
+
+# Usage
+agent = PumpFun402Agent("http://localhost:3402")
+
+token = agent.deploy_token({
+    "tokenName": "AI Agent Token",
+    "tokenSymbol": "AGENT",
+    "description": "Deployed by an autonomous agent",
+    "imageUrl": "https://example.com/agent.png",
+    "initialBuyAmount": 0.1
+})
+
+print(f"Token deployed at: {token['tokenAddress']}")
+```
+
+### JavaScript/Node.js Example
+
+```javascript
+const axios = require('axios');
+const { LightningClient } = require('your-ln-client');
+
+class PumpFun402Agent {
+    constructor(baseUrl, lnClient) {
+        this.baseUrl = baseUrl;
+        this.lnClient = lnClient;
+    }
+
+    async deployToken(tokenData) {
+        // Initiate deployment
+        try {
+            await axios.post(`${this.baseUrl}/api/v1/deploy/token`, tokenData);
+        } catch (error) {
+            if (error.response?.status === 402) {
+                const { deploymentId, payment } = error.response.data;
+                
+                // Pay the invoice
+                await this.lnClient.payInvoice(payment.invoice);
+                
+                // Wait for deployment
+                return await this.waitForDeployment(deploymentId);
+            }
+            throw error;
+        }
+    }
+
+    async waitForDeployment(deploymentId) {
+        while (true) {
+            const { data } = await axios.get(
+                `${this.baseUrl}/api/v1/deploy/status/${deploymentId}`
+            );
+            
+            if (data.status === 'completed') {
+                return data;
+            } else if (data.status === 'failed') {
+                throw new Error('Deployment failed');
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+    }
+}
+
+// Usage
+const agent = new PumpFun402Agent(
+    'http://localhost:3402',
+    new LightningClient()
+);
+
+const token = await agent.deployToken({
+    tokenName: 'Agent Token',
+    tokenSymbol: 'AGT',
+    description: 'AI-deployed token',
+    imageUrl: 'https://example.com/token.png',
+    initialBuyAmount: 0.1
+});
+
+console.log(`Deployed: ${token.tokenAddress}`);
+```
+
+## Development
+
+```bash
+# Run in development mode
+npm run dev
+
+# Run tests
+npm test
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+```
+
+## Project Structure
+
+```
+pumpfun-402-agent/
+├── src/
+│   ├── api/
+│   │   ├── routes/
+│   │   │   └── deploy.ts
+│   │   └── middleware/
+│   │       ├── auth.ts
+│   │       └── rateLimit.ts
+│   ├── services/
+│   │   ├── lightning.ts
+│   │   ├── pumpfun.ts
+│   │   └── deployment.ts
+│   ├── models/
+│   │   └── deployment.ts
+│   ├── utils/
+│   │   ├── validation.ts
+│   │   └── webhooks.ts
+│   └── index.ts
+├── tests/
+│   ├── integration/
+│   └── unit/
+├── .env.example
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+## Security Considerations
+
+- **Private Key Management**: Never commit private keys. Use environment variables or secrets management.
+- **Rate Limiting**: Prevents abuse even with payments.
+- **Invoice Verification**: Always verify Lightning payment before executing.
+- **Webhook Signatures**: Validate webhook authenticity.
+- **Input Validation**: Sanitize all token metadata.
+
+## Pricing Tiers
+
+| Tier | Price (sats) | Features |
+|------|--------------|----------|
+| Basic | 1,000 | Standard deployment |
+| Priority | 5,000 | Priority execution + monitoring |
+| Premium | 10,000 | Expedited + analytics dashboard |
+
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## Roadmap
+
+- [ ] Support for multiple payment methods (Bitcoin on-chain, USDC)
+- [ ] Advanced token configurations (vesting, multi-sig)
+- [ ] Analytics dashboard for deployed tokens
+- [ ] Batch deployment capabilities
+- [ ] Integration with other Solana token launchers
+- [ ] Agent marketplace for token templates
+
+## Support
+
+- Documentation: [docs.yourservice.com](https://docs.yourservice.com)
+- Discord: [discord.gg/yourserver](https://discord.gg/yourserver)
+- Email: support@yourservice.com
+
+## Acknowledgments
+
+- [Pump.fun](https://pump.fun) for the token deployment platform
+- [Lightning Network](https://lightning.network) for micropayments infrastructure
+- HTTP 402 working group for payment protocol standards
+
+---
