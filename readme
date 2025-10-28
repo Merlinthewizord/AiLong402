@@ -1,37 +1,38 @@
-# 402 Agent for Pump.fun Deployment
+# 402 Agent for Pump.fun Deployment (Solana Native)
 
-A payment-gated API service that enables AI agents to deploy tokens on Pump.fun using the HTTP 402 (Payment Required) standard with Lightning Network payments.
+A payment-gated API service that enables AI agents to deploy tokens on Pump.fun using the HTTP 402 (Payment Required) standard with native Solana (SOL/USDC) payments.
 
 ## Overview
 
-This agent implements the emerging 402 payment protocol, allowing AI agents and automated systems to programmatically deploy tokens on Pump.fun by paying per request via Lightning Network. The service acts as a bridge between payment verification and Pump.fun's deployment API.
+This agent implements the 402 payment protocol with Solana blockchain payments, allowing AI agents and automated systems to programmatically deploy tokens on Pump.fun by paying per request in SOL or USDC. The service acts as a bridge between payment verification and Pump.fun's deployment API.
 
 ## Features
 
-- **402 Payment Protocol**: Standard HTTP 402 response with Lightning invoice
-- **Lightning Network Integration**: Fast, low-fee micropayments
+- **402 Payment Protocol**: Standard HTTP 402 response with Solana payment address
+- **Native Solana Payments**: SOL and SPL token (USDC) support
 - **Pump.fun Integration**: Direct token deployment to Solana via Pump.fun
 - **Agent-Friendly API**: RESTful endpoints designed for AI agent consumption
-- **Payment Verification**: Automatic invoice verification before execution
+- **Real-time Payment Verification**: WebSocket monitoring of Solana transactions
+- **Escrow Protection**: Optional escrow for failed deployments
 - **Rate Limiting**: Configurable limits per payment tier
 - **Webhook Support**: Real-time deployment status updates
 
 ## Architecture
 
 ```
-┌─────────────┐      402 Request       ┌──────────────┐
-│  AI Agent   │ ───────────────────────>│  402 Agent   │
-│             │                         │   Service    │
-│             │ <───────────────────────│              │
-└─────────────┘   Lightning Invoice     └──────┬───────┘
-       │                                       │
-       │  Payment via LN                       │
-       │                                       │
-       v                                       v
-┌─────────────┐                         ┌──────────────┐
-│  Lightning  │                         │  Pump.fun    │
-│   Network   │                         │     API      │
-└─────────────┘                         └──────────────┘
+┌─────────────┐    402 Request      ┌──────────────┐
+│  AI Agent   │ ──────────────────> │  402 Agent   │
+│   Wallet    │                     │   Service    │
+│             │ <────────────────── │              │
+└──────┬──────┘  Payment Address    └──────┬───────┘
+       │                                    │
+       │  Send SOL/USDC                     │ Monitor
+       │                                    │ Payment
+       v                                    v
+┌─────────────┐                      ┌──────────────┐
+│   Solana    │ ──────────────────> │   Pump.fun   │
+│ Blockchain  │   Deploy Token       │     API      │
+└─────────────┘                      └──────────────┘
 ```
 
 ## Installation
@@ -39,16 +40,17 @@ This agent implements the emerging 402 payment protocol, allowing AI agents and 
 ### Prerequisites
 
 - Node.js 18+
-- Lightning Network node (LND, CLN, or similar)
 - Solana wallet with SOL for gas fees
+- Solana RPC endpoint (Helius, QuickNode, or self-hosted)
 - Pump.fun API access
+- PostgreSQL or MongoDB for payment tracking
 
 ### Setup
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/pumpfun-402-agent.git
-cd pumpfun-402-agent
+git clone https://github.com/yourusername/pumpfun-402-solana-agent.git
+cd pumpfun-402-solana-agent
 
 # Install dependencies
 npm install
@@ -63,25 +65,37 @@ nano .env
 ### Environment Variables
 
 ```env
-# Lightning Network
-LN_NODE_URL=https://your-ln-node:8080
-LN_MACAROON_PATH=/path/to/admin.macaroon
-LN_TLS_CERT_PATH=/path/to/tls.cert
-
-# Solana & Pump.fun
+# Solana Configuration
 SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
-PUMPFUN_PRIVATE_KEY=your_private_key_here
+SOLANA_RPC_WS_URL=wss://api.mainnet-beta.solana.com
+PAYMENT_WALLET_PRIVATE_KEY=your_base58_private_key
+DEPLOYMENT_WALLET_PRIVATE_KEY=your_deployment_private_key
+
+# Pump.fun Configuration
 PUMPFUN_API_URL=https://pumpportal.fun/api
+PUMPFUN_PRIVATE_KEY=your_pumpfun_private_key
+
+# Payment Configuration
+PRICE_PER_DEPLOYMENT_SOL=0.01 # SOL
+PRICE_PER_DEPLOYMENT_USDC=1.5 # USDC
+USDC_MINT_ADDRESS=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
+PAYMENT_TIMEOUT=300 # seconds
+PAYMENT_CONFIRMATION_BLOCKS=1
 
 # Service Configuration
 PORT=3402
-PRICE_PER_DEPLOYMENT=1000 # satoshis
-INVOICE_EXPIRY=300 # seconds
-WEBHOOK_SECRET=your_webhook_secret
+NODE_ENV=production
+DATABASE_URL=postgresql://user:pass@localhost:5432/pumpfun402
 
 # Security
 API_KEY_SALT=random_salt_for_api_keys
+JWT_SECRET=your_jwt_secret
+WEBHOOK_SECRET=your_webhook_secret
 MAX_REQUESTS_PER_HOUR=100
+
+# Optional Escrow
+ENABLE_ESCROW=true
+ESCROW_PROGRAM_ID=your_escrow_program_id
 ```
 
 ## API Documentation
@@ -90,7 +104,7 @@ MAX_REQUESTS_PER_HOUR=100
 
 **POST** `/api/v1/deploy/token`
 
-Initiates a token deployment request. Returns 402 with Lightning invoice.
+Initiates a token deployment request. Returns 402 with Solana payment address.
 
 **Request Body:**
 ```json
@@ -105,7 +119,9 @@ Initiates a token deployment request. Returns 402 with Lightning invoice.
   "initialBuyAmount": 0.1,
   "slippageBps": 500,
   "priorityFee": 0.0001,
-  "webhookUrl": "https://your-agent.com/webhook"
+  "paymentToken": "SOL",
+  "webhookUrl": "https://your-agent.com/webhook",
+  "agentWallet": "YourAgentWalletAddress..."
 }
 ```
 
@@ -116,12 +132,17 @@ Initiates a token deployment request. Returns 402 with Lightning invoice.
   "message": "Payment Required",
   "deploymentId": "dep_abc123xyz",
   "payment": {
-    "amount": 1000,
-    "currency": "satoshis",
-    "invoice": "lnbc10n1p3...",
-    "expiresAt": "2025-10-28T15:30:00Z"
+    "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+    "amount": 0.01,
+    "token": "SOL",
+    "amountLamports": 10000000,
+    "memo": "PUMPFUN_DEPLOY_dep_abc123xyz",
+    "expiresAt": "2025-10-28T15:30:00Z",
+    "qrCode": "data:image/png;base64,iVBORw0KGgo...",
+    "deepLink": "solana:7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU?amount=0.01&memo=PUMPFUN_DEPLOY_dep_abc123xyz"
   },
-  "verifyUrl": "/api/v1/deploy/verify/dep_abc123xyz"
+  "verifyUrl": "/api/v1/deploy/verify/dep_abc123xyz",
+  "wsUrl": "wss://api.yourservice.com/ws/payment/dep_abc123xyz"
 }
 ```
 
@@ -138,6 +159,8 @@ Checks payment status and executes deployment if paid.
   "deploymentId": "dep_abc123xyz",
   "paid": true,
   "paidAt": "2025-10-28T15:25:00Z",
+  "paymentSignature": "5wHu8W5N4KqgZz3nP8K...",
+  "paymentAmount": 0.01,
   "deployment": {
     "status": "processing",
     "estimatedCompletion": "2025-10-28T15:26:00Z"
@@ -152,7 +175,9 @@ Checks payment status and executes deployment if paid.
   "deploymentId": "dep_abc123xyz",
   "paid": false,
   "payment": {
-    "invoice": "lnbc10n1p3...",
+    "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+    "amount": 0.01,
+    "token": "SOL",
     "expiresAt": "2025-10-28T15:30:00Z"
   }
 }
@@ -168,29 +193,79 @@ Checks payment status and executes deployment if paid.
   "deploymentId": "dep_abc123xyz",
   "status": "completed",
   "tokenAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-  "signature": "5wHu...",
+  "signature": "5wHu8W5N4KqgZz3nP8K...",
+  "paymentSignature": "3nP8K5wHu8W5N4KqgZz...",
   "marketCap": 50000,
+  "bondingCurveProgress": 15.5,
   "createdAt": "2025-10-28T15:26:00Z",
   "links": {
     "pumpfun": "https://pump.fun/7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-    "solscan": "https://solscan.io/token/7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
+    "solscan": "https://solscan.io/token/7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+    "dexscreener": "https://dexscreener.com/solana/7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
   }
+}
+```
+
+### 4. WebSocket Payment Monitoring
+
+**WS** `wss://api.yourservice.com/ws/payment/{deploymentId}`
+
+Real-time payment status updates.
+
+**Messages:**
+```json
+{
+  "type": "payment_detected",
+  "deploymentId": "dep_abc123xyz",
+  "signature": "5wHu8W5N4KqgZz3nP8K...",
+  "amount": 0.01,
+  "confirmations": 1
+}
+
+{
+  "type": "payment_confirmed",
+  "deploymentId": "dep_abc123xyz",
+  "signature": "5wHu8W5N4KqgZz3nP8K...",
+  "confirmations": 32
+}
+
+{
+  "type": "deployment_started",
+  "deploymentId": "dep_abc123xyz"
+}
+
+{
+  "type": "deployment_completed",
+  "deploymentId": "dep_abc123xyz",
+  "tokenAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
 }
 ```
 
 ## Usage Examples
 
-### Python Agent Example
+### Python Agent with Solana.py
 
 ```python
+from solana.rpc.api import Client
+from solana.transaction import Transaction
+from solders.keypair import Keypair
+from solders.system_program import TransferParams, transfer
+from solders.pubkey import Pubkey
 import requests
 import time
+import websocket
+import json
 
-class PumpFun402Agent:
-    def __init__(self, base_url):
+class PumpFun402SolanaAgent:
+    def __init__(self, base_url, agent_keypair, rpc_url="https://api.mainnet-beta.solana.com"):
         self.base_url = base_url
+        self.agent_keypair = agent_keypair
+        self.solana_client = Client(rpc_url)
     
     def deploy_token(self, token_data):
+        # Add agent wallet to request
+        token_data['agentWallet'] = str(self.agent_keypair.pubkey())
+        
         # Step 1: Initiate deployment
         response = requests.post(
             f"{self.base_url}/api/v1/deploy/token",
@@ -200,119 +275,245 @@ class PumpFun402Agent:
         if response.status_code == 402:
             payment_data = response.json()
             deployment_id = payment_data['deploymentId']
-            invoice = payment_data['payment']['invoice']
+            payment_info = payment_data['payment']
             
-            print(f"Payment required: {invoice}")
+            print(f"Payment required: {payment_info['amount']} {payment_info['token']}")
+            print(f"Payment address: {payment_info['address']}")
             
-            # Step 2: Pay invoice (using your Lightning client)
-            self.pay_lightning_invoice(invoice)
+            # Step 2: Send SOL payment
+            self.send_sol_payment(
+                payment_info['address'],
+                payment_info['amountLamports'],
+                payment_info['memo']
+            )
             
-            # Step 3: Poll for completion
-            while True:
-                status = requests.get(
-                    f"{self.base_url}/api/v1/deploy/verify/{deployment_id}"
-                )
-                
-                data = status.json()
-                if data['status'] == 'executing':
-                    print("Deployment in progress...")
-                    time.sleep(5)
-                    
-                    # Check final status
-                    final = requests.get(
-                        f"{self.base_url}/api/v1/deploy/status/{deployment_id}"
-                    )
-                    
-                    if final.json()['status'] == 'completed':
-                        return final.json()
-                else:
-                    time.sleep(2)
+            # Step 3: Wait for deployment via WebSocket
+            return self.wait_for_deployment_ws(deployment_id)
     
-    def pay_lightning_invoice(self, invoice):
-        # Implement your Lightning payment logic here
-        pass
+    def send_sol_payment(self, to_address, amount_lamports, memo):
+        """Send SOL payment with memo"""
+        to_pubkey = Pubkey.from_string(to_address)
+        
+        # Create transfer instruction
+        transfer_ix = transfer(
+            TransferParams(
+                from_pubkey=self.agent_keypair.pubkey(),
+                to_pubkey=to_pubkey,
+                lamports=amount_lamports
+            )
+        )
+        
+        # Create transaction
+        recent_blockhash = self.solana_client.get_latest_blockhash().value.blockhash
+        transaction = Transaction(recent_blockhash=recent_blockhash)
+        transaction.add(transfer_ix)
+        
+        # Add memo if provided
+        if memo:
+            from solders.instruction import Instruction
+            memo_program = Pubkey.from_string("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr")
+            memo_ix = Instruction(
+                program_id=memo_program,
+                data=memo.encode(),
+                accounts=[]
+            )
+            transaction.add(memo_ix)
+        
+        # Sign and send
+        transaction.sign(self.agent_keypair)
+        signature = self.solana_client.send_transaction(transaction, self.agent_keypair)
+        
+        print(f"Payment sent: {signature.value}")
+        return signature.value
+    
+    def wait_for_deployment_ws(self, deployment_id):
+        """Wait for deployment completion via WebSocket"""
+        ws_url = f"wss://{self.base_url.replace('https://', '').replace('http://', '')}/ws/payment/{deployment_id}"
+        
+        result = {'completed': False}
+        
+        def on_message(ws, message):
+            data = json.loads(message)
+            print(f"Status: {data['type']}")
+            
+            if data['type'] == 'deployment_completed':
+                result['data'] = data
+                result['completed'] = True
+                ws.close()
+        
+        def on_error(ws, error):
+            print(f"WebSocket error: {error}")
+        
+        ws = websocket.WebSocketApp(
+            ws_url,
+            on_message=on_message,
+            on_error=on_error
+        )
+        
+        ws.run_forever()
+        
+        return result.get('data', {})
 
 # Usage
-agent = PumpFun402Agent("http://localhost:3402")
+agent_keypair = Keypair.from_base58_string("your_private_key_here")
+agent = PumpFun402SolanaAgent(
+    "https://api.yourservice.com",
+    agent_keypair
+)
 
 token = agent.deploy_token({
     "tokenName": "AI Agent Token",
     "tokenSymbol": "AGENT",
     "description": "Deployed by an autonomous agent",
     "imageUrl": "https://example.com/agent.png",
-    "initialBuyAmount": 0.1
+    "initialBuyAmount": 0.1,
+    "paymentToken": "SOL"
 })
 
-print(f"Token deployed at: {token['tokenAddress']}")
+print(f"Token deployed: {token['tokenAddress']}")
 ```
 
-### JavaScript/Node.js Example
+### JavaScript/Node.js Example with @solana/web3.js
 
 ```javascript
+const { Connection, Keypair, Transaction, SystemProgram, PublicKey, sendAndConfirmTransaction } = require('@solana/web3.js');
 const axios = require('axios');
-const { LightningClient } = require('your-ln-client');
+const WebSocket = require('ws');
+const bs58 = require('bs58');
 
-class PumpFun402Agent {
-    constructor(baseUrl, lnClient) {
+class PumpFun402SolanaAgent {
+    constructor(baseUrl, agentKeypair, rpcUrl = 'https://api.mainnet-beta.solana.com') {
         this.baseUrl = baseUrl;
-        this.lnClient = lnClient;
+        this.agentKeypair = agentKeypair;
+        this.connection = new Connection(rpcUrl, 'confirmed');
     }
 
     async deployToken(tokenData) {
-        // Initiate deployment
+        // Add agent wallet
+        tokenData.agentWallet = this.agentKeypair.publicKey.toBase58();
+
+        // Step 1: Initiate deployment
         try {
             await axios.post(`${this.baseUrl}/api/v1/deploy/token`, tokenData);
         } catch (error) {
             if (error.response?.status === 402) {
                 const { deploymentId, payment } = error.response.data;
                 
-                // Pay the invoice
-                await this.lnClient.payInvoice(payment.invoice);
+                console.log(`Payment required: ${payment.amount} ${payment.token}`);
                 
-                // Wait for deployment
-                return await this.waitForDeployment(deploymentId);
+                // Step 2: Send payment
+                await this.sendSolPayment(
+                    payment.address,
+                    payment.amountLamports,
+                    payment.memo
+                );
+                
+                // Step 3: Wait for deployment
+                return await this.waitForDeploymentWS(deploymentId);
             }
             throw error;
         }
     }
 
-    async waitForDeployment(deploymentId) {
-        while (true) {
-            const { data } = await axios.get(
-                `${this.baseUrl}/api/v1/deploy/status/${deploymentId}`
-            );
-            
-            if (data.status === 'completed') {
-                return data;
-            } else if (data.status === 'failed') {
-                throw new Error('Deployment failed');
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 3000));
+    async sendSolPayment(toAddress, amountLamports, memo) {
+        const toPubkey = new PublicKey(toAddress);
+        
+        // Create transfer instruction
+        const transaction = new Transaction().add(
+            SystemProgram.transfer({
+                fromPubkey: this.agentKeypair.publicKey,
+                toPubkey: toPubkey,
+                lamports: amountLamports
+            })
+        );
+        
+        // Add memo if provided
+        if (memo) {
+            const memoProgram = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
+            transaction.add({
+                keys: [],
+                programId: memoProgram,
+                data: Buffer.from(memo, 'utf8')
+            });
         }
+        
+        // Send transaction
+        const signature = await sendAndConfirmTransaction(
+            this.connection,
+            transaction,
+            [this.agentKeypair]
+        );
+        
+        console.log(`Payment sent: ${signature}`);
+        return signature;
+    }
+
+    async waitForDeploymentWS(deploymentId) {
+        return new Promise((resolve, reject) => {
+            const wsUrl = `${this.baseUrl.replace('https', 'wss').replace('http', 'ws')}/ws/payment/${deploymentId}`;
+            const ws = new WebSocket(wsUrl);
+            
+            const timeout = setTimeout(() => {
+                ws.close();
+                reject(new Error('Deployment timeout'));
+            }, 600000); // 10 minutes
+            
+            ws.on('message', (data) => {
+                const message = JSON.parse(data);
+                console.log(`Status: ${message.type}`);
+                
+                if (message.type === 'deployment_completed') {
+                    clearTimeout(timeout);
+                    ws.close();
+                    resolve(message);
+                } else if (message.type === 'deployment_failed') {
+                    clearTimeout(timeout);
+                    ws.close();
+                    reject(new Error(message.error));
+                }
+            });
+            
+            ws.on('error', (error) => {
+                clearTimeout(timeout);
+                reject(error);
+            });
+        });
     }
 }
 
 // Usage
-const agent = new PumpFun402Agent(
-    'http://localhost:3402',
-    new LightningClient()
-);
+(async () => {
+    const agentKeypair = Keypair.fromSecretKey(
+        bs58.decode('your_private_key_here')
+    );
+    
+    const agent = new PumpFun402SolanaAgent(
+        'https://api.yourservice.com',
+        agentKeypair
+    );
 
-const token = await agent.deployToken({
-    tokenName: 'Agent Token',
-    tokenSymbol: 'AGT',
-    description: 'AI-deployed token',
-    imageUrl: 'https://example.com/token.png',
-    initialBuyAmount: 0.1
-});
+    const token = await agent.deployToken({
+        tokenName: 'Agent Token',
+        tokenSymbol: 'AGT',
+        description: 'AI-deployed token',
+        imageUrl: 'https://example.com/token.png',
+        initialBuyAmount: 0.1,
+        paymentToken: 'SOL'
+    });
 
-console.log(`Deployed: ${token.tokenAddress}`);
+    console.log(`Deployed: ${token.tokenAddress}`);
+})();
 ```
 
 ## Development
 
 ```bash
+# Install dependencies
+npm install
+
+# Run database migrations
+npm run migrate
+
 # Run in development mode
 npm run dev
 
@@ -329,24 +530,36 @@ npm start
 ## Project Structure
 
 ```
-pumpfun-402-agent/
+pumpfun-402-solana-agent/
 ├── src/
 │   ├── api/
 │   │   ├── routes/
-│   │   │   └── deploy.ts
+│   │   │   ├── deploy.ts
+│   │   │   └── webhooks.ts
 │   │   └── middleware/
 │   │       ├── auth.ts
 │   │       └── rateLimit.ts
 │   ├── services/
-│   │   ├── lightning.ts
+│   │   ├── solana/
+│   │   │   ├── payment.ts
+│   │   │   ├── monitor.ts
+│   │   │   └── escrow.ts
 │   │   ├── pumpfun.ts
 │   │   └── deployment.ts
+│   ├── websocket/
+│   │   └── paymentMonitor.ts
 │   ├── models/
-│   │   └── deployment.ts
+│   │   ├── deployment.ts
+│   │   └── payment.ts
 │   ├── utils/
 │   │   ├── validation.ts
+│   │   ├── qrcode.ts
 │   │   └── webhooks.ts
 │   └── index.ts
+├── contracts/ (Optional Anchor escrow program)
+│   └── escrow/
+│       ├── programs/
+│       └── tests/
 ├── tests/
 │   ├── integration/
 │   └── unit/
@@ -358,47 +571,115 @@ pumpfun-402-agent/
 
 ## Security Considerations
 
-- **Private Key Management**: Never commit private keys. Use environment variables or secrets management.
-- **Rate Limiting**: Prevents abuse even with payments.
-- **Invoice Verification**: Always verify Lightning payment before executing.
-- **Webhook Signatures**: Validate webhook authenticity.
-- **Input Validation**: Sanitize all token metadata.
+- **Private Key Management**: Use hardware wallets or MPC for production
+- **Payment Verification**: Wait for sufficient confirmations (1+ blocks)
+- **Memo Validation**: Verify payment memo matches deployment ID
+- **Rate Limiting**: Prevent spam even with payments
+- **Escrow Protection**: Refund on failed deployments
+- **Input Validation**: Sanitize all token metadata
+- **Webhook Signatures**: HMAC verification for webhooks
+
+## Payment Options
+
+### SOL Payments
+- Fastest (400ms block times)
+- Lowest friction for agents
+- Native network token
+
+### USDC Payments
+- Stable pricing
+- Predictable costs
+- Better for accounting
+
+### Multi-Token Support
+```json
+{
+  "paymentToken": "USDC",
+  "tokenMintAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+}
+```
 
 ## Pricing Tiers
 
-| Tier | Price (sats) | Features |
-|------|--------------|----------|
-| Basic | 1,000 | Standard deployment |
-| Priority | 5,000 | Priority execution + monitoring |
-| Premium | 10,000 | Expedited + analytics dashboard |
+| Tier | Price (SOL) | Price (USDC) | Features |
+|------|-------------|--------------|----------|
+| Basic | 0.01 | $1.50 | Standard deployment |
+| Priority | 0.05 | $7.50 | Priority + higher compute |
+| Premium | 0.1 | $15.00 | Expedited + analytics |
+
+## Escrow System (Optional)
+
+Enable trustless payments with on-chain escrow:
+
+1. Agent creates escrow account with payment
+2. Service deploys token
+3. On success: Service claims escrow
+4. On failure: Agent reclaims funds
+
+```rust
+// Anchor program for escrow
+#[program]
+pub mod pumpfun_402_escrow {
+    pub fn initialize_escrow(ctx: Context, amount: u64) -> Result
+    pub fn claim_escrow(ctx: Context, deployment_id: String) -> Result
+    pub fn refund_escrow(ctx: Context) -> Result
+}
+```
+
+## Monitoring & Analytics
+
+Built-in dashboard for tracking:
+- Total deployments
+- Payment success rate
+- Average deployment time
+- Revenue analytics
+- Failed transactions
+
+## Error Handling
+
+Common errors and solutions:
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `PAYMENT_TIMEOUT` | Payment not received | Resend with higher priority fee |
+| `INSUFFICIENT_PAYMENT` | Wrong amount sent | Send exact amount specified |
+| `INVALID_MEMO` | Missing/wrong memo | Include deployment ID in memo |
+| `DEPLOYMENT_FAILED` | Pump.fun error | Automatic refund initiated |
 
 ## Contributing
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE)
 
 ## Roadmap
 
-- [ ] Support for multiple payment methods (Bitcoin on-chain, USDC)
-- [ ] Advanced token configurations (vesting, multi-sig)
-- [ ] Analytics dashboard for deployed tokens
-- [ ] Batch deployment capabilities
-- [ ] Integration with other Solana token launchers
-- [ ] Agent marketplace for token templates
+- [x] SOL payment support
+- [x] USDC payment support
+- [ ] On-chain escrow program
+- [ ] Multi-sig deployment wallet
+- [ ] Batch deployment support
+- [ ] Token vesting integration
+- [ ] Agent reputation system
+- [ ] Automated market making
+- [ ] Cross-chain bridge support
 
 ## Support
 
 - Documentation: [docs.yourservice.com](https://docs.yourservice.com)
 - Discord: [discord.gg/yourserver](https://discord.gg/yourserver)
+- Telegram: [@yourservice](https://t.me/yourservice)
 - Email: support@yourservice.com
 
 ## Acknowledgments
 
-- [Pump.fun](https://pump.fun) for the token deployment platform
-- [Lightning Network](https://lightning.network) for micropayments infrastructure
-- HTTP 402 working group for payment protocol standards
+- [Pump.fun](https://pump.fun) - Token deployment platform
+- [Solana](https://solana.com) - High-performance blockchain
+- [@solana/web3.js](https://github.com/solana-labs/solana-web3.js) - JavaScript SDK
+- [Anchor](https://www.anchor-lang.com/) - Solana development framework
 
 ---
+
+**Disclaimer**: Experimental software. Use at your own risk. Ensure compliance with local regulations.
