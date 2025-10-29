@@ -1,26 +1,39 @@
 ```markdown
-# 402 Agent for Pump.fun Deployment (Solana Native)
+# 🧠 Pump.fun 402 Agent (Solana Native)
 
-A payment-gated API service that enables AI agents to deploy tokens on Pump.fun using the HTTP 402 (Payment Required) standard with native Solana (SOL/USDC) payments.
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Solana Compatible](https://img.shields.io/badge/Solana-Mainnet-orange.svg)](https://solana.com)
+[![Made for AI Agents](https://img.shields.io/badge/AI%20Agent-Ready-blue.svg)](#)
+[![Payments-402](https://img.shields.io/badge/HTTP-402%20Payment%20Required-ff69b4.svg)](#)
 
-## Overview
+> **A payment-gated API that lets AI agents deploy tokens on Pump.fun using Solana-native payments (SOL or USDC) and the HTTP `402 Payment Required` standard.**
 
-This agent implements the 402 payment protocol with Solana blockchain payments, allowing AI agents and automated systems to programmatically deploy tokens on Pump.fun by paying per request in SOL or USDC. The service acts as a bridge between payment verification and Pump.fun's deployment API.
+---
 
-## Features
+## 🚀 Overview
 
-- **402 Payment Protocol**: Standard HTTP 402 response with Solana payment address
-- **Native Solana Payments**: SOL and SPL token (USDC) support
-- **Pump.fun Integration**: Direct token deployment to Solana via Pump.fun
-- **Agent-Friendly API**: RESTful endpoints designed for AI agent consumption
-- **Real-time Payment Verification**: WebSocket monitoring of Solana transactions
-- **Escrow Protection**: Optional escrow for failed deployments
-- **Rate Limiting**: Configurable limits per payment tier
-- **Webhook Support**: Real-time deployment status updates
+This service enables **AI agents**, bots, or other automated systems to deploy tokens on **[Pump.fun](https://pump.fun)** after completing a blockchain payment.
 
-## Architecture
+It implements the **HTTP 402 protocol** for on-chain payments, verifying Solana transactions in real time and triggering deployments once the payment clears.
 
-```
+---
+
+## ⚙️ Features
+
+- 🔐 **402 Payment Flow** — Native on-chain paywall
+- 💸 **SOL / USDC support** — SPL tokens supported
+- ⚡ **Real-time Solana TX monitoring**
+- 🤖 **Agent-optimized REST & WS API**
+- 🪙 **Pump.fun token deployment**
+- 🧾 **Optional escrow + refunds**
+- 📊 **Prometheus metrics & logging**
+- 🪄 **Webhook + WebSocket event hooks**
+
+---
+
+## 🏗️ Architecture
+
+```text
 ┌─────────────┐    402 Request      ┌──────────────┐
 │  AI Agent   │ ──────────────────> │  402 Agent   │
 │   Wallet    │                     │   Service    │
@@ -36,211 +49,216 @@ This agent implements the 402 payment protocol with Solana blockchain payments, 
 └─────────────┘                      └──────────────┘
 ```
 
-## Installation
+---
 
-### Prerequisites
+## 🧩 Installation
 
-- Node.js 18+
-- Solana wallet with SOL for gas fees
-- Solana RPC endpoint (Helius, QuickNode, or self-hosted)
-- Pump.fun API access
-- PostgreSQL or MongoDB for payment tracking
+### Requirements
+
+- Node.js `v18+`
+- Solana wallet with SOL for gas
+- RPC endpoint (Helius, QuickNode, or public)
+- PostgreSQL or MongoDB
+- Pump.fun API key
 
 ### Setup
 
 ```bash
-# Clone the repository
+# Clone
 git clone https://github.com/yourusername/pumpfun-402-solana-agent.git
 cd pumpfun-402-solana-agent
 
-# Install dependencies
+# Install
 npm install
 
-# Copy environment template
+# Configure
 cp .env.example .env
-
-# Configure your environment variables
 nano .env
 ```
 
 ### Environment Variables
 
 ```env
-# Solana Configuration
 SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
 SOLANA_RPC_WS_URL=wss://api.mainnet-beta.solana.com
 PAYMENT_WALLET_PRIVATE_KEY=your_base58_private_key
 DEPLOYMENT_WALLET_PRIVATE_KEY=your_deployment_private_key
-
-# Pump.fun Configuration
 PUMPFUN_API_URL=https://pumpportal.fun/api
 PUMPFUN_PRIVATE_KEY=your_pumpfun_private_key
 
-# Payment Configuration
-PRICE_PER_DEPLOYMENT_SOL=0.01 # SOL
-PRICE_PER_DEPLOYMENT_USDC=1.5 # USDC
+PRICE_PER_DEPLOYMENT_SOL=0.01
+PRICE_PER_DEPLOYMENT_USDC=1.5
 USDC_MINT_ADDRESS=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
-PAYMENT_TIMEOUT=300 # seconds
-PAYMENT_CONFIRMATION_BLOCKS=1
 
-# Service Configuration
 PORT=3402
 NODE_ENV=production
 DATABASE_URL=postgresql://user:pass@localhost:5432/pumpfun402
 
-# Security
-API_KEY_SALT=random_salt_for_api_keys
 JWT_SECRET=your_jwt_secret
 WEBHOOK_SECRET=your_webhook_secret
 MAX_REQUESTS_PER_HOUR=100
-
-# Optional Escrow
-ENABLE_ESCROW=true
-ESCROW_PROGRAM_ID=your_escrow_program_id
 ```
 
-## API Documentation
+---
 
-### 1. Initiate Token Deployment
+## 🔌 API Endpoints
 
-**POST** `/api/v1/deploy/token`
+### `POST /api/v1/deploy/token`
 
-Initiates a token deployment request. Returns 402 with Solana payment address.
+Initiates token deployment.  
+If unpaid, returns **HTTP 402** with a payment address.
 
-**Request Body:**
+**Example Request**
 ```json
 {
   "tokenName": "MyToken",
   "tokenSymbol": "MTK",
-  "description": "A token deployed by an AI agent",
-  "imageUrl": "https://example.com/token-image.png",
-  "twitter": "https://twitter.com/mytoken",
-  "telegram": "https://t.me/mytoken",
-  "website": "https://mytoken.com",
-  "initialBuyAmount": 0.1,
-  "slippageBps": 500,
-  "priorityFee": 0.0001,
-  "paymentToken": "SOL",
-  "webhookUrl": "https://your-agent.com/webhook",
-  "agentWallet": "YourAgentWalletAddress..."
+  "description": "Deployed by AI",
+  "imageUrl": "https://example.com/token.png",
+  "paymentToken": "SOL"
 }
 ```
 
-**Response (402):**
+**Example Response (402)**
 ```json
 {
   "status": 402,
-  "message": "Payment Required",
   "deploymentId": "dep_abc123xyz",
   "payment": {
     "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
     "amount": 0.01,
-    "token": "SOL",
-    "amountLamports": 10000000,
-    "memo": "PUMPFUN_DEPLOY_dep_abc123xyz",
-    "expiresAt": "2025-10-28T15:30:00Z",
-    "qrCode": "data:image/png;base64,iVBORw0KGgo...",
-    "deepLink": "solana:7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU?amount=0.01&memo=PUMPFUN_DEPLOY_dep_abc123xyz"
+    "token": "SOL"
   },
-  "verifyUrl": "/api/v1/deploy/verify/dep_abc123xyz",
-  "wsUrl": "wss://api.yourservice.com/ws/payment/dep_abc123xyz"
+  "verifyUrl": "/api/v1/deploy/verify/dep_abc123xyz"
 }
 ```
 
-### 2. Verify Payment & Execute
+---
 
-**GET** `/api/v1/deploy/verify/{deploymentId}`
+### `GET /api/v1/deploy/verify/{deploymentId}`
 
-Checks payment status and executes deployment if paid.
+Verifies payment and triggers deployment if confirmed.
 
-**Response (200 - Paid):**
+**Response (paid)**
 ```json
 {
   "status": "executing",
   "deploymentId": "dep_abc123xyz",
-  "paid": true,
-  "paidAt": "2025-10-28T15:25:00Z",
-  "paymentSignature": "5wHu8W5N4KqgZz3nP8K...",
-  "paymentAmount": 0.01,
-  "deployment": {
-    "status": "processing",
-    "estimatedCompletion": "2025-10-28T15:26:00Z"
-  }
+  "paid": true
 }
 ```
 
-**Response (402 - Unpaid):**
+**Response (unpaid)**
 ```json
 {
   "status": "pending_payment",
-  "deploymentId": "dep_abc123xyz",
-  "paid": false,
-  "payment": {
-    "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-    "amount": 0.01,
-    "token": "SOL",
-    "expiresAt": "2025-10-28T15:30:00Z"
-  }
+  "paid": false
 }
 ```
 
-### 3. Get Deployment Status
+---
 
-**GET** `/api/v1/deploy/status/{deploymentId}`
+### `GET /api/v1/deploy/status/{deploymentId}`
 
-**Response:**
+Returns deployment progress.
+
+**Example**
 ```json
 {
-  "deploymentId": "dep_abc123xyz",
   "status": "completed",
   "tokenAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-  "signature": "5wHu8W5N4KqgZz3nP8K...",
-  "paymentSignature": "3nP8K5wHu8W5N4KqgZz...",
-  "marketCap": 50000,
-  "bondingCurveProgress": 15.5,
-  "createdAt": "2025-10-28T15:26:00Z",
-  "links": {
-    "pumpfun": "https://pump.fun/7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-    "solscan": "https://solscan.io/token/7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-    "dexscreener": "https://dexscreener.com/solana/7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
-  }
+  "pumpfunUrl": "https://pump.fun/7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
 }
 ```
 
-### 4. WebSocket Payment Monitoring
+---
 
-**WS** `wss://api.yourservice.com/ws/payment/{deploymentId}`
+## 🛰️ WebSocket Events
 
-Real-time payment status updates.
+Connect to  
+`wss://api.yourservice.com/ws/payment/{deploymentId}`
 
-**Messages:**
+**Events**
 ```json
-{
-  "type": "payment_detected",
-  "deploymentId": "dep_abc123xyz",
-  "signature": "5wHu8W5N4KqgZz3nP8K...",
-  "amount": 0.01,
-  "confirmations": 1
-}
-
-{
-  "type": "payment_confirmed",
-  "deploymentId": "dep_abc123xyz",
-  "signature": "5wHu8W5N4KqgZz3nP8K...",
-  "confirmations": 32
-}
-
-{
-  "type": "deployment_started",
-  "deploymentId": "dep_abc123xyz"
-}
-
-{
-  "type": "deployment_completed",
-  "deploymentId": "dep_abc123xyz",
-  "tokenAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
-}
+{ "type": "payment_detected" }
+{ "type": "payment_confirmed" }
+{ "type": "deployment_started" }
+{ "type": "deployment_completed" }
 ```
 
-(continues…)
+---
+
+## 📩 Webhook Notifications
+
+| Event | Description |
+|--------|--------------|
+| `payment_confirmed` | Payment verified |
+| `deployment_started` | Token deployment in progress |
+| `deployment_completed` | Deployment finalized |
+
+---
+
+## 💰 Escrow & Refunds
+
+When enabled, payments are held in escrow and released only after:
+
+- Verified on-chain deployment, **and**
+- Pump.fun token address confirmation.
+
+Refunds auto-initiate if deployment fails.
+
+---
+
+## 📊 Monitoring
+
+Metrics available at `/metrics` (Prometheus format):
+
+```
+deployments_total{status="completed"} 245
+payments_confirmed_total 244
+deployment_failures_total 1
+payment_latency_seconds_avg 12.5
+```
+
+---
+
+## 🧠 AI Agent Workflow Example
+
+1. `POST /deploy/token` → get 402 with address  
+2. Pay SOL to that address  
+3. WebSocket: watch `payment_confirmed`  
+4. Deployment executes on Pump.fun  
+5. Webhook confirms final token info  
+
+---
+
+## 🧱 Deployment
+
+**Docker**
+```bash
+docker build -t pumpfun-402-agent .
+docker run -d -p 3402:3402 --env-file .env pumpfun-402-agent
+```
+
+**PM2**
+```bash
+pm2 start src/index.js --name "pumpfun-402-agent"
+```
+
+---
+
+## 🧾 License
+
+MIT © 2025 Pump.fun 402 Agent Contributors  
+Use freely with attribution.
+
+---
+
+## 🌐 Links
+
+- 🌸 Pump.fun: [pump.fun](https://pump.fun)
+- 🧩 GitHub: [github.com/yourusername/pumpfun-402-solana-agent](https://github.com/yourusername/pumpfun-402-solana-agent)
+- 🐦 Twitter/X: [@Pumpfun402Agent](https://x.com/Pumpfun402Agent)
+- 💬 Telegram: [t.me/pumpfun402](https://t.me/pumpfun402)
+- ✉️ Email: support@pumpfun402.io
 ```
