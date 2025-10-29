@@ -1,4 +1,4 @@
-```markdown
+
 # 🧠 Pump.fun 402 Agent (Solana Native)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
