@@ -1,0 +1,54 @@
+
+```json
+{
+  "compilerOptions": {
+    // Language and Environment
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    
+    // Type Checking
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "skipLibCheck": true,
+    
+    // Emit
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "removeComments": true,
+    
+    // Interop Constraints
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    
+    // Completeness
+    "skipDefaultLibCheck": true,
+    
+    // Path Mapping (optional)
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "plugin-402-payment": ["./packages/plugin-402-payment/src"],
+      "plugin-pumpfun": ["./packages/plugin-pumpfun/src"]
+    }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".turbo",
+    "coverage"
+  ]
+}
+```
+
+---
