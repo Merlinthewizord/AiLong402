@@ -1,36 +1,26 @@
-Sure thing — here’s your document rewritten with **proper, consistent Markdown formatting**, including clear code fences, headings, and spacing for readability.
-
----
-
+```markdown
 # 402 Agent for Pump.fun Deployment (Solana Native)
 
-A **payment-gated API service** that enables AI agents to deploy tokens on Pump.fun using the **HTTP 402 (Payment Required)** standard with **native Solana (SOL/USDC)** payments.
-
----
+A payment-gated API service that enables AI agents to deploy tokens on Pump.fun using the HTTP 402 (Payment Required) standard with native Solana (SOL/USDC) payments.
 
 ## Overview
 
-This agent implements the **402 payment protocol** with Solana blockchain payments, allowing AI agents and automated systems to programmatically deploy tokens on Pump.fun by paying per request in SOL or USDC.
-The service acts as a bridge between **payment verification** and **Pump.fun’s deployment API**.
-
----
+This agent implements the 402 payment protocol with Solana blockchain payments, allowing AI agents and automated systems to programmatically deploy tokens on Pump.fun by paying per request in SOL or USDC. The service acts as a bridge between payment verification and Pump.fun's deployment API.
 
 ## Features
 
-* **402 Payment Protocol** – Standard HTTP 402 response with Solana payment address
-* **Native Solana Payments** – SOL and SPL token (USDC) support
-* **Pump.fun Integration** – Direct token deployment to Solana via Pump.fun
-* **Agent-Friendly API** – RESTful endpoints designed for AI agent consumption
-* **Real-time Payment Verification** – WebSocket monitoring of Solana transactions
-* **Escrow Protection** – Optional escrow for failed deployments
-* **Rate Limiting** – Configurable limits per payment tier
-* **Webhook Support** – Real-time deployment status updates
-
----
+- **402 Payment Protocol**: Standard HTTP 402 response with Solana payment address
+- **Native Solana Payments**: SOL and SPL token (USDC) support
+- **Pump.fun Integration**: Direct token deployment to Solana via Pump.fun
+- **Agent-Friendly API**: RESTful endpoints designed for AI agent consumption
+- **Real-time Payment Verification**: WebSocket monitoring of Solana transactions
+- **Escrow Protection**: Optional escrow for failed deployments
+- **Rate Limiting**: Configurable limits per payment tier
+- **Webhook Support**: Real-time deployment status updates
 
 ## Architecture
 
-```text
+```
 ┌─────────────┐    402 Request      ┌──────────────┐
 │  AI Agent   │ ──────────────────> │  402 Agent   │
 │   Wallet    │                     │   Service    │
@@ -46,19 +36,15 @@ The service acts as a bridge between **payment verification** and **Pump.fun’s
 └─────────────┘                      └──────────────┘
 ```
 
----
-
 ## Installation
 
 ### Prerequisites
 
-* Node.js 18+
-* Solana wallet with SOL for gas fees
-* Solana RPC endpoint (Helius, QuickNode, or self-hosted)
-* Pump.fun API access
-* PostgreSQL or MongoDB for payment tracking
-
----
+- Node.js 18+
+- Solana wallet with SOL for gas fees
+- Solana RPC endpoint (Helius, QuickNode, or self-hosted)
+- Pump.fun API access
+- PostgreSQL or MongoDB for payment tracking
 
 ### Setup
 
@@ -76,8 +62,6 @@ cp .env.example .env
 # Configure your environment variables
 nano .env
 ```
-
----
 
 ### Environment Variables
 
@@ -115,17 +99,15 @@ ENABLE_ESCROW=true
 ESCROW_PROGRAM_ID=your_escrow_program_id
 ```
 
----
-
 ## API Documentation
 
 ### 1. Initiate Token Deployment
 
 **POST** `/api/v1/deploy/token`
-Initiates a token deployment request. Returns `402` with Solana payment address.
+
+Initiates a token deployment request. Returns 402 with Solana payment address.
 
 **Request Body:**
-
 ```json
 {
   "tokenName": "MyToken",
@@ -145,7 +127,6 @@ Initiates a token deployment request. Returns `402` with Solana payment address.
 ```
 
 **Response (402):**
-
 ```json
 {
   "status": 402,
@@ -166,15 +147,13 @@ Initiates a token deployment request. Returns `402` with Solana payment address.
 }
 ```
 
----
-
 ### 2. Verify Payment & Execute
 
 **GET** `/api/v1/deploy/verify/{deploymentId}`
+
 Checks payment status and executes deployment if paid.
 
-**Response (200 – Paid):**
-
+**Response (200 - Paid):**
 ```json
 {
   "status": "executing",
@@ -190,8 +169,7 @@ Checks payment status and executes deployment if paid.
 }
 ```
 
-**Response (402 – Unpaid):**
-
+**Response (402 - Unpaid):**
 ```json
 {
   "status": "pending_payment",
@@ -206,14 +184,11 @@ Checks payment status and executes deployment if paid.
 }
 ```
 
----
-
 ### 3. Get Deployment Status
 
 **GET** `/api/v1/deploy/status/{deploymentId}`
 
 **Response:**
-
 ```json
 {
   "deploymentId": "dep_abc123xyz",
@@ -232,8 +207,6 @@ Checks payment status and executes deployment if paid.
 }
 ```
 
----
-
 ### 4. WebSocket Payment Monitoring
 
 **WS** `wss://api.yourservice.com/ws/payment/{deploymentId}`
@@ -241,188 +214,33 @@ Checks payment status and executes deployment if paid.
 Real-time payment status updates.
 
 **Messages:**
-
-```json
-{ "type": "payment_detected", "deploymentId": "dep_abc123xyz", "signature": "5wHu8W5N4KqgZz3nP8K...", "amount": 0.01, "confirmations": 1 }
-{ "type": "payment_confirmed", "deploymentId": "dep_abc123xyz", "signature": "5wHu8W5N4KqgZz3nP8K...", "confirmations": 32 }
-{ "type": "deployment_started", "deploymentId": "dep_abc123xyz" }
-{ "type": "deployment_completed", "deploymentId": "dep_abc123xyz", "tokenAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU" }
-```
-
----
-
-## Usage Examples
-
-### Python Agent (Solana.py)
-
-```python
-# Example Python implementation...
-```
-
----
-
-### JavaScript / Node.js Example (@solana/web3.js)
-
-```javascript
-// Example JS implementation...
-```
-
----
-
-## Development
-
-```bash
-npm install
-npm run migrate
-npm run dev
-npm test
-npm run build
-npm start
-```
-
----
-
-## Project Structure
-
-```text
-pumpfun-402-solana-agent/
-├── src/
-│   ├── api/
-│   ├── services/
-│   ├── websocket/
-│   ├── models/
-│   ├── utils/
-│   └── index.ts
-├── contracts/
-├── tests/
-├── .env.example
-├── package.json
-├── tsconfig.json
-└── README.md
-```
-
----
-
-## Security Considerations
-
-* Use **hardware wallets or MPC** for key management
-* Verify **payment memo** matches deployment ID
-* Enforce **rate limiting and input validation**
-* Enable **escrow protection** for refunds
-* Validate **webhook signatures** via HMAC
-
----
-
-## Payment Options
-
-### SOL Payments
-
-* Fastest (400ms block times)
-* Lowest friction for agents
-* Native network token
-
-### USDC Payments
-
-* Stable pricing
-* Predictable costs
-* Better for accounting
-
-### Multi-Token Example
-
 ```json
 {
-  "paymentToken": "USDC",
-  "tokenMintAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+  "type": "payment_detected",
+  "deploymentId": "dep_abc123xyz",
+  "signature": "5wHu8W5N4KqgZz3nP8K...",
+  "amount": 0.01,
+  "confirmations": 1
+}
+
+{
+  "type": "payment_confirmed",
+  "deploymentId": "dep_abc123xyz",
+  "signature": "5wHu8W5N4KqgZz3nP8K...",
+  "confirmations": 32
+}
+
+{
+  "type": "deployment_started",
+  "deploymentId": "dep_abc123xyz"
+}
+
+{
+  "type": "deployment_completed",
+  "deploymentId": "dep_abc123xyz",
+  "tokenAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
 }
 ```
 
----
-
-## Pricing Tiers
-
-| Tier         | Price (SOL) | Price (USDC) | Features                  |
-| ------------ | ----------- | ------------ | ------------------------- |
-| **Basic**    | 0.01        | $1.50        | Standard deployment       |
-| **Priority** | 0.05        | $7.50        | Priority + higher compute |
-| **Premium**  | 0.1         | $15.00       | Expedited + analytics     |
-
----
-
-## Escrow System (Optional)
-
-Trustless payments with on-chain escrow:
-
-```rust
-#[program]
-pub mod pumpfun_402_escrow {
-    pub fn initialize_escrow(ctx: Context, amount: u64) -> Result
-    pub fn claim_escrow(ctx: Context, deployment_id: String) -> Result
-    pub fn refund_escrow(ctx: Context) -> Result
-}
+(continues…)
 ```
-
----
-
-## Monitoring & Analytics
-
-Track key metrics:
-
-* Total deployments
-* Payment success rate
-* Average deployment time
-* Revenue analytics
-* Failed transactions
-
----
-
-## Error Handling
-
-| Error                  | Cause                | Solution                        |
-| ---------------------- | -------------------- | ------------------------------- |
-| `PAYMENT_TIMEOUT`      | Payment not received | Resend with higher priority fee |
-| `INSUFFICIENT_PAYMENT` | Wrong amount sent    | Send exact amount specified     |
-| `INVALID_MEMO`         | Missing/wrong memo   | Include deployment ID in memo   |
-| `DEPLOYMENT_FAILED`    | Pump.fun error       | Automatic refund initiated      |
-
----
-
-## Contributing
-
-Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md)
-
----
-
-## License
-
-**MIT License** – see [LICENSE](LICENSE)
-
----
-
-## Roadmap
-
-* [x] SOL payment support
-* [x] USDC payment support
-* [ ] On-chain escrow program
-* [ ] Multi-sig deployment wallet
-* [ ] Batch deployment support
-* [ ] Token vesting integration
-* [ ] Agent reputation system
-* [ ] Automated market making
-* [ ] Cross-chain bridge support
-
----
-
-## Acknowledgments
-
-* [Pump.fun](https://pump.fun)
-* [Solana](https://solana.com)
-* [@solana/web3.js](https://github.com/solana-labs/solana-web3.js)
-* [Anchor](https://www.anchor-lang.com/)
-
----
-
-**Disclaimer:** Experimental software. Use at your own risk. Ensure compliance with local regulations.
-
----
-
-would you like me to format it as a **GitHub-ready README.md file** (with emojis, TOC, badges, etc.) next? bloop
