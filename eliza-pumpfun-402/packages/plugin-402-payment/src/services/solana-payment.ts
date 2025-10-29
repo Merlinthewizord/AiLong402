@@ -1,4 +1,4 @@
-```typescript
+
 import {
     Connection,
     PublicKey,
@@ -105,3 +105,4 @@ export class SolanaPaymentService {
     }
 }
 ```
+
