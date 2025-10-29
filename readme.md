@@ -257,8 +257,7 @@ Use freely with attribution.
 ## 🌐 Links
 
 - 🌸 Pump.fun: [pump.fun](https://pump.fun)
-- 🧩 GitHub: [github.com/yourusername/pumpfun-402-solana-agent](https://github.com/yourusername/pumpfun-402-solana-agent)
-- 🐦 Twitter/X: [@Pumpfun402Agent](https://x.com/Pumpfun402Agent)
-- 💬 Telegram: [t.me/pumpfun402](https://t.me/pumpfun402)
+- 🐦 Twitter/X: [@Ailon402](https://x.com/ailon402)
+- 💬 Telegram: [t.me/ailon402](https://t.me/ailon402)
 - ✉️ Email: support@pumpfun402.io
 ```
